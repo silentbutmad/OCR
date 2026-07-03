@@ -21,7 +21,4 @@ async def register():
 
         instance_id=f"OCR-SERVICE:{HOST}",
 
-        # Register as HTTPS
-        secure_port=443,
-        secure_port_enabled=True,
     )
