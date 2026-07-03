@@ -90,9 +90,17 @@ async def scan_bill(file: UploadFile = File(...)):
     logger.debug(f"File name: {file.filename}")
     logger.debug(f"File content type: {file.content_type}")
     
-    if not file.content_type or not file.content_type.startswith("image/"):
-        logger.error(f"Invalid file type: {file.content_type}")
-        raise HTTPException(400, detail="File must be an image")
+    # Validate file extension instead of content-type (more reliable)
+    if file.filename:
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif']
+        if file_ext not in allowed_extensions:
+            logger.error(f"Invalid file extension: {file_ext}")
+            raise HTTPException(400, detail=f"File must be an image. Allowed formats: {', '.join(allowed_extensions)}")
+        logger.debug(f"File extension validated: {file_ext}")
+    else:
+        logger.error("No filename provided")
+        raise HTTPException(400, detail="File must have a filename")
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     try:
@@ -100,7 +108,17 @@ async def scan_bill(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        logger.info(f"File saved successfully, processing with OCR...")
+        logger.info(f"File saved successfully, validating image...")
+        
+        # Validate that the file is actually a readable image
+        test_img = cv2.imread(file_path)
+        if test_img is None:
+            logger.error("File is not a valid image or is corrupted")
+            raise HTTPException(400, detail="Invalid image file. Please upload a valid image.")
+        
+        logger.debug(f"Image validated successfully: shape={test_img.shape}")
+        
+        logger.info(f"Processing with OCR...")
         data = process_image(file_path)
         logger.info(f"OCR processing completed: {data}")
         
