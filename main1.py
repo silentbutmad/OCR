@@ -8,7 +8,15 @@ import os
 import base64
 import numpy as np
 import cv2
+import logging
 from ocr_extractor import process_image, process_image_array
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="OCR Expense Backend", version="2.0.0")
 
@@ -77,20 +85,38 @@ def health():
 
 @app.post("/ocr/scan-bill/", response_model=OCRResponse)
 async def scan_bill(file: UploadFile = File(...)):
+    logger.info("=" * 50)
+    logger.info("Received scan-bill request")
+    logger.debug(f"File name: {file.filename}")
+    logger.debug(f"File content type: {file.content_type}")
+    
     if not file.content_type or not file.content_type.startswith("image/"):
+        logger.error(f"Invalid file type: {file.content_type}")
         raise HTTPException(400, detail="File must be an image")
 
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     try:
+        logger.debug(f"Saving file to: {file_path}")
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-
+        
+        logger.info(f"File saved successfully, processing with OCR...")
         data = process_image(file_path)
-        return map_response(data)
+        logger.info(f"OCR processing completed: {data}")
+        
+        response = map_response(data)
+        logger.info(f"Response: {response}")
+        logger.info("=" * 50)
+        return response
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(500, detail=str(e))
+        logger.error(f"Error processing bill: {type(e).__name__} - {str(e)}", exc_info=True)
+        logger.info("=" * 50)
+        raise HTTPException(500, detail=f"Error processing image: {str(e)}")
     finally:
         if os.path.exists(file_path):
+            logger.debug(f"Cleaning up temporary file: {file_path}")
             os.remove(file_path)
 
 class CameraPayload(BaseModel):
@@ -98,27 +124,61 @@ class CameraPayload(BaseModel):
 
 @app.post("/ocr/scan-camera/", response_model=OCRResponse)
 async def scan_camera(payload: CameraPayload):
+    logger.info("=" * 50)
+    logger.info("Received scan-camera request")
+    logger.debug(f"Payload image length: {len(payload.image)}")
+    logger.debug(f"Payload image preview (first 100 chars): {payload.image[:100]}")
+    
     try:
+        # Decode base64 image
+        logger.debug("Decoding base64 image...")
         image_data = base64.b64decode(payload.image)
+        logger.debug(f"Decoded image size: {len(image_data)} bytes")
+        
         np_arr = np.frombuffer(image_data, np.uint8)
+        logger.debug(f"NumPy array shape: {np_arr.shape}")
         
         # Use IMREAD_UNCHANGED to preserve alpha channel for PNG files
+        logger.debug("Decoding image with cv2.imdecode (IMREAD_UNCHANGED)...")
         img = cv2.imdecode(np_arr, cv2.IMREAD_UNCHANGED)
+        
         if img is None:
-            raise HTTPException(400, detail="Invalid image data")
+            logger.error("cv2.imdecode returned None - invalid image data")
+            raise HTTPException(400, detail="Invalid image data: Could not decode image")
+        
+        logger.debug(f"Image shape: {img.shape}, dtype: {img.dtype}")
+        logger.info(f"Image decoded successfully: {img.shape}")
         
         # Handle PNG with alpha channel (4 channels: BGRA)
         if len(img.shape) == 3 and img.shape[2] == 4:
+            logger.info("Detected 4-channel BGRA image (PNG with alpha), converting to BGR")
             # Convert BGRA to BGR by removing alpha channel
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            logger.debug(f"Converted to BGR, new shape: {img.shape}")
         # Handle grayscale images (1 channel)
         elif len(img.shape) == 2:
+            logger.info("Detected grayscale image, converting to BGR")
             # Convert grayscale to BGR
             img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+            logger.debug(f"Converted to BGR, new shape: {img.shape}")
+        else:
+            logger.debug(f"Image already in BGR format: {img.shape}")
 
+        # Process image with OCR
+        logger.info("Starting OCR processing...")
         data = process_image_array(img)
-        return map_response(data)
-    except HTTPException:
+        logger.info(f"OCR processing completed: {data}")
+        
+        response = map_response(data)
+        logger.info(f"Response: {response}")
+        logger.info("=" * 50)
+        return response
+        
+    except HTTPException as he:
+        logger.error(f"HTTP Exception: {he.status_code} - {he.detail}")
+        logger.info("=" * 50)
         raise
     except Exception as e:
-        raise HTTPException(500, detail=str(e))
+        logger.error(f"Unexpected error: {type(e).__name__} - {str(e)}", exc_info=True)
+        logger.info("=" * 50)
+        raise HTTPException(500, detail=f"Internal server error: {str(e)}")
