@@ -59,6 +59,7 @@ def map_response(data: dict) -> OCRResponse:
 
 
 @app.get("/")
+@app.get("/ocr")
 def home():
     return {
         "message": "OCR Expense API Running",
