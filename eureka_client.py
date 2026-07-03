@@ -3,7 +3,7 @@ import py_eureka_client.eureka_client as eureka_client
 
 HOST = os.getenv(
     "HOSTNAME",
-    "ocr-service.onrender.com"
+    "ocr-dr2b.onrender.com"
 )
 
 PORT = int(os.getenv("PORT", "8000"))
