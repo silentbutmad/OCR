@@ -101,9 +101,20 @@ async def scan_camera(payload: CameraPayload):
     try:
         image_data = base64.b64decode(payload.image)
         np_arr = np.frombuffer(image_data, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        
+        # Use IMREAD_UNCHANGED to preserve alpha channel for PNG files
+        img = cv2.imdecode(np_arr, cv2.IMREAD_UNCHANGED)
         if img is None:
             raise HTTPException(400, detail="Invalid image data")
+        
+        # Handle PNG with alpha channel (4 channels: BGRA)
+        if len(img.shape) == 3 and img.shape[2] == 4:
+            # Convert BGRA to BGR by removing alpha channel
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+        # Handle grayscale images (1 channel)
+        elif len(img.shape) == 2:
+            # Convert grayscale to BGR
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
         data = process_image_array(img)
         return map_response(data)
