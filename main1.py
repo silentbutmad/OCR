@@ -14,7 +14,7 @@ app = FastAPI(title="OCR Expense Backend", version="2.0.0")
 
 @app.on_event("startup")
 async def startup():
-    register()
+    await register()
 
 app.add_middleware(
     CORSMiddleware,

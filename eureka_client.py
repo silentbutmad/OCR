@@ -13,8 +13,8 @@ EUREKA_SERVER = os.getenv(
     "https://admin:admin123@eurekadiscoveryserver-ick0.onrender.com/eureka/"
 )
 
-def register():
-    eureka_client.init(
+async def register():
+    await eureka_client.init_async(
         eureka_server=EUREKA_SERVER,
         app_name="OCR-SERVICE",
         instance_host=HOST,
