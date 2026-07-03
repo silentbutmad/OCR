@@ -75,7 +75,7 @@ def home():
 def health():
     return {"status": "ok"}
 
-@app.post("/scan-bill/", response_model=OCRResponse)
+@app.post("/ocr/scan-bill/", response_model=OCRResponse)
 async def scan_bill(file: UploadFile = File(...)):
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(400, detail="File must be an image")
@@ -96,7 +96,7 @@ async def scan_bill(file: UploadFile = File(...)):
 class CameraPayload(BaseModel):
     image: str
 
-@app.post("/scan-camera/", response_model=OCRResponse)
+@app.post("/ocr/scan-camera/", response_model=OCRResponse)
 async def scan_camera(payload: CameraPayload):
     try:
         image_data = base64.b64decode(payload.image)
