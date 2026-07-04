@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 from eureka_client import register
 import shutil
+import hashlib
 import os
 import base64
 import numpy as np
