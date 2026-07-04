@@ -89,7 +89,20 @@ async def scan_bill(file: UploadFile = File(...)):
     logger.info("Received scan-bill request")
     logger.debug(f"File name: {file.filename}")
     logger.debug(f"File content type: {file.content_type}")
-    
+
+    print("m=================================")
+    print("m=================================")
+    print("m=================================")
+    print("m=================================")
+    print("=" * 50)
+    print("Filename:", file.filename)
+    print("Content Type:", file.content_type)
+    print("File Size:", len(contents))
+    print("MD5:", hashlib.md5(contents).hexdigest())
+    print("=" * 50)
+
+
+
     # Validate file extension instead of content-type (more reliable)
     if file.filename:
         file_ext = os.path.splitext(file.filename)[1].lower()
