@@ -94,12 +94,14 @@ async def scan_bill(file: UploadFile = File(...)):
     print("m=================================")
     print("m=================================")
     print("m=================================")
+    contents = await file.read()
     print("=" * 50)
     print("Filename:", file.filename)
     print("Content Type:", file.content_type)
     print("File Size:", len(contents))
     print("MD5:", hashlib.md5(contents).hexdigest())
     print("=" * 50)
+    file.file.seek(0)
 
 
 
